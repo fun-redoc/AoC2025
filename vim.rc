@@ -1,0 +1,109 @@
+" Settings specific for this C++ Project. Place at Git root. 
+" HINT: activate using :source command, or use with autocommand from .vimrc
+" HINT: leader is set in ~/.vimrc
+
+" Vundle plugin manager setup
+set nocompatible
+filetype off
+
+set rtp+=~/.vim/bundle/Vundle.vim
+call vundle#begin()
+
+" Vundle manages itself
+Plugin 'VundleVim/Vundle.vim'
+
+" C++ development plugins
+Plugin 'vim-scripts/c.vim'             " C/C++ IDE features
+Plugin 'preservim/tagbar'              " Symbol outline
+Plugin 'ycm-core/YouCompleteMe'        " Smart autocompletion
+Plugin 'junegunn/fzf'                  " Fuzzy finder core
+Plugin 'junegunn/fzf.vim'              " Fuzzy finder integration
+
+"Plugin 'dense-analysis/ale'                                                                 
+Plugin 'vim-syntastic/syntastic'
+
+Plugin 'https://github.com/tpope/vim-fugitive.git'
+
+Plugin 'preservim/nerdtree'  
+
+Plugin 'vim-airline/vim-airline'
+Plugin 'vim-airline/vim-airline-themes'
+
+
+" Brief help on vundle
+" :PluginList       - lists configured plugins                                                  
+" :PluginInstall    - installs plugins; append `!` to update or just :PluginUpdate 
+" :PluginSearch foo - searches for foo; append `!` to refresh local cache                 
+" :PluginClean      - confirms removal of unused plugins; append `!` to auto-approve removal    
+" 
+
+call vundle#end()
+
+filetype plugin indent on
+
+syntax on
+" set colorsheme depending on time of the day
+if strftime("%H") >= 8 && strftime("%H") < 18
+    execute 'colorscheme default'
+" alternative shine, zellner, default
+" solarized: morning,  peachpuff, retrobox
+" distraction free: quiet
+
+    let g:airline_theme='light'                        
+    " Set theme (requires vim-airline-themes)
+    " themes include: dark, light, solarized, minimal, and luna
+else
+    execute 'colorscheme habamax' 
+" alaternative elford, wildcharm, zaibatso, industry, koehler
+" solarized: slate, sorbet, unokai, desert, evening, habamax
+" alo nice blie, darkblue
+
+    let g:airline_theme='dark'                        
+    " Set theme (requires vim-airline-themes)
+    " themes include: dark, light, solarized, minimal, and luna
+endif
+
+packadd termdebug         " activate terminal debugger
+let g:termdebug_wide=1
+set completeopt-=preview  " deactivate preview window (Screatch buffer)
+
+" airline
+let g:airline#extensions#tabline#enabled = 1      " Show open buffers in tabline
+let g:airline#extensions#whitespace#enabled = 1   " Highlight trailing spaces and mixed indentation
+let g:airline_powerline_fonts = 1
+let g:airline#extensions#whitespace#enabled = 1     " Show trailing spaces, mixed indent
+let g:airline#extensions#tabline#enabled = 0         " Show open buffers
+let g:airline#extensions#branch#enabled = 1          " Show Git branch
+let g:airline#extensions#syntastic#enabled = 1       " Show linting status (via Syntastic)
+"let g:airline#extensions#ale#enabled = 1             " Show linting status (via ALE)
+let g:syntastic_cpp_checkers = ['g++']
+
+
+" C++ specific settings
+set errorformat=%f:%l:%m
+set tabstop=2 softtabstop=2 shiftwidth=2 expandtab
+set colorcolumn=110                                                                                           
+highlight ColorColumn ctermbg=lightgray  
+let g:ycm_global_ycm_extra_conf_file = "~/.vim/bundle/YouCompleteMe/.ycm_extra_conf.py" 
+
+let &path.="src/include,/usr/include/," 
+ 
+set makeprg=make\ debug\  
+"set makeprg=make 
+"set makeprg=g++\ -Wall\ -std=c++23\ %
+
+let $LD_LIBRARY_PATH="./debug_lib/"
+
+" PARAMETERS for Testing
+let test_args = "-in input.txt -year 2025 -day 02 -part 2" 
+ 
+nnoremap <F3> :e output.txt<CR>
+nnoremap <F4> :make!  <cr> 
+execute "nnoremap <F5> :!make\ debug\ && ./debug_bin/main " . test_args . "<cr>" 
+execute "nnoremap <F6> :TermdebugCommand ./debug_bin/main " . test_args . "<cr>"
+
+nnoremap <leader>r :!g++ % -o %< && ./%<<CR> # compile and run current file 
+
+execute 'PluginInstall'
+execute 'quit'
+"execute 'NERDTreeVCS'

@@ -39,3 +39,17 @@
 
 # debug information files
 *.dwo
+
+
+# special
+**/bin
+**/lib
+**/obj
+.depend
+**/*.swp
+debug_bin/**
+debug_lib/**
+debug_obj/**
+input.txt
+output.txt
+
