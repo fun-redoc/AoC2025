@@ -53,3 +53,6 @@ debug_obj/**
 input.txt
 output.txt
 
+private.key
+certificate.crt
+request.csr
