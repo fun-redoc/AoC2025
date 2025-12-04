@@ -95,7 +95,7 @@ set makeprg=make\ debug\
 let $LD_LIBRARY_PATH="./debug_lib/"
 
 " PARAMETERS for Testing
-let test_args = "-in input.txt -year 2025 -day 02 -part 2" 
+let test_args = "-in input.txt -year 2025 -day 03 -part 2" 
  
 nnoremap <F3> :e output.txt<CR>
 nnoremap <F4> :make!  <cr> 
