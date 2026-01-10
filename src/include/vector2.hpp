@@ -4,15 +4,14 @@
 
 #ifndef AOC_VECTOR2_H
 #define AOC_VECTOR2_H
+#include <functional>
 #include <utility>
-#include <hash_set>
+//#include <hash_set>
 #include "mymath.hpp"
 
 using namespace std;
 namespace algebra {
     template<typename T> using Vec2d =  pair<T, T>;
-    //struct Vec2dHash;
-    //struct Vec2dEqual;
     struct Vec2dHash {
         template <class T>
         size_t operator() (const Vec2d<T>& p) const {
@@ -28,6 +27,18 @@ namespace algebra {
             return lhs.first == rhs.first && lhs.second == rhs.second;
         }
     };
+    template<typename T> bool operator<(const Vec2d<T> &lhs, const Vec2d<T> &rhs) {
+      if(lhs.first < rhs.first) {
+        return true;
+      } 
+      else if(lhs.first == rhs.first && lhs.second <= rhs.second) {
+          return true; 
+      }
+      else {
+        return false;
+      }
+    }
+
     //template<typename T> Vec2d<T> add(const Vec2d<T> &pos, const Vec2d<T> &dir);
     // for some reason template function don't link if implemented separatelly in cpp file
     template<typename T> Vec2d<T> add(const Vec2d<T> &pos, const Vec2d<T> &dir) {

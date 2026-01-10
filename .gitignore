@@ -42,6 +42,10 @@
 
 
 # special
+.kateproject.build
+.project.gf
+dap.json
+
 **/bin
 **/lib
 **/obj
@@ -51,6 +55,7 @@ debug_bin/**
 debug_lib/**
 debug_obj/**
 input.txt
+input_large.txt
 output.txt
 
 private.key

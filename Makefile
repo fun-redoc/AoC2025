@@ -1,7 +1,7 @@
 CC=gcc
 CXX=g++
 RM=rm -rf
-CXXFLAGS=-std=c++23 -fPIC -Wall -pedantic
+CXXFLAGS=-std=c++2c -Wc++26-extensions -fPIC -Wall -pedantic
 DEBUG_FLAGS = -g         # Debugging flags (you can add more as needed)
 LDFLAGS=-Wall
 LDLIBS=-Llib/aoc
