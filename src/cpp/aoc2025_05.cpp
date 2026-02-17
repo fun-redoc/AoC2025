@@ -77,7 +77,7 @@ namespace aoc_2025_05 {
     }
 
     ll naive1_part2(vector<Range> rs, ll min, ll max) {
-      auto d = max-min+1;
+      //auto d = max-min+1;
       ll cnt_fresh = 0;
       //vector<bool> fresh(d,false);  
       for(ll i=min; i<=max; i++) {

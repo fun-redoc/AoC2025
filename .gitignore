@@ -54,9 +54,11 @@ dap.json
 debug_bin/**
 debug_lib/**
 debug_obj/**
-input.txt
-input_large.txt
+test_build/**
+input*.txt
 output.txt
+
+**/*save*
 
 private.key
 certificate.crt

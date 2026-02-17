@@ -64,13 +64,20 @@ else
 endif
 
 packadd termdebug         " activate terminal debugger
-"let g:termdebug_config['wide']=1
-"let g:termdebug_config['variables_window'] = v:true
-"let g:termdebug_config['variables_window_height'] = 15
-let g:termdebug_wide=1
-let g:termdebug_variables_window=0  " variables window not usable for c++ types too long no values
-"let g:termdebug_variables_window_height=8
+" let g:termdebug_wide=1
+" let g:termdebug_variables_window=0  " variables window not usable for c++ types too long no values
+let g:termdebug_config = {}
+let g:termdebug_config['variables_window'] = v:false
+let g:termdebug_config['wide'] = 80
+let g:termdebug_config['use_prompt'] = v:false
 set completeopt-=preview  " deactivate preview window (Screatch buffer)
+
+
+augroup TermebugSetUpTearDown
+  autocmd!
+  autocmd User TermdebugStartPost  execute "resize +11<cr>"
+  autocmd User TermdebugStopPost  echomsg 'end of debugging.'
+augroup END
 
 " airline
 let g:airline#extensions#tabline#enabled = 1      " Show open buffers in tabline
@@ -85,14 +92,17 @@ let g:syntastic_cpp_checkers = ['g++']
 
 
 " C++ specific settings
+set hidden "allow switching buffers without saving first
 set errorformat=%f:%l:%m
 set tabstop=2 softtabstop=2 shiftwidth=2 expandtab
 set colorcolumn=110                                                                                           
 highlight ColorColumn ctermbg=lightgray  
 let g:ycm_global_ycm_extra_conf_file = "~/.vim/bundle/YouCompleteMe/.ycm_extra_conf.py" 
+set mps+=<:>
 
 let &path.="src/include,/usr/include/," 
  
+"set makeprg=make\ tests\  
 set makeprg=make\ debug\  
 "set makeprg=make 
 "set makeprg=g++\ -Wall\ -std=c++23\ %
@@ -100,12 +110,17 @@ set makeprg=make\ debug\
 let $LD_LIBRARY_PATH="./debug_lib/"
 
 " PARAMETERS for Testing
-let test_args = "-in input_large.txt -year 2025 -day 09 -part 2" 
+let test_args = "-in input.txt -year 2025 -day 10 -part 2" 
+let contest_args = "-in input_large.txt -year 2025 -day 10 -part 2" 
  
 nnoremap <F3> :e output.txt<CR>
-nnoremap <F4> :update<cr>:make!<cr>:copen<cr> 
+"nnoremap <F4> :update<cr>:make!<cr>:copen<cr> 
+nnoremap <F4> :update<cr>:make!<cr>
+execute "nnoremap <S-F4> :!make\ tests\ && ./test_build/simplex_test" . "<cr>" 
 execute "nnoremap <F5> :!make\ debug\ && ./debug_bin/main " . test_args . "<cr>" 
+execute "nnoremap <S-F5> :!make\ debug\ && ./debug_bin/main " . contest_args . "<cr>" 
 execute "nnoremap <F6> :TermdebugCommand ./debug_bin/main " . test_args . "<cr>"
+execute "nnoremap <S-F6> :TermdebugCommand ./test_build/simplex_test " . "<cr>"
 
 nnoremap <leader>r :!g++ % -o %< && ./%<<CR> # compile and run current file 
 

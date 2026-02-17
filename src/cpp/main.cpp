@@ -1,5 +1,4 @@
 #include <iostream>
-#include <ctime>
 #include <dlfcn.h>
 
 #include "../include/io.hpp"
@@ -37,8 +36,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    time_t now = time(0);
-    tm *ltm = localtime(&now);
+    //time_t now = time(0);
+    //tm *ltm = localtime(&now);
 
     // Call the function
     solution();

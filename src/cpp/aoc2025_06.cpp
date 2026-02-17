@@ -95,21 +95,21 @@ namespace aoc_2025_06 {
       // read
       string line;
       vector<string> lines;
-      int cols = 0;
+      //int cols = 0;
       while(getline(cin, line)) {
         lines.push_back(line);
       }
       
       vector<Task> tasks2;
       
-      int c = 0;
+      //int c = 0;
       bool first_col = true;
       int col = -1;
       for(int c=0; c < (int)lines[0].size(); c++) {
         string cephalopod;
         char op = '_';
         for(int r=lines.size()-1; r>=0; r--) {
-          if(r == lines.size()-1) {
+          if((size_t)r == lines.size()-1) {
             if(lines[r].at(c) == '*' || lines[r].at(c) == '+') {
               op = lines[r].at(c);
               first_col = true;
