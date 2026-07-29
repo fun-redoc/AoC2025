@@ -63,3 +63,4 @@ output.txt
 private.key
 certificate.crt
 request.csr
+**/__pycache__/**

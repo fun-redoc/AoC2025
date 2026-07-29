@@ -195,6 +195,9 @@ namespace aoc_2025_10 {
 
 
 
+  bool non_integer(double v) {
+    return !LinearProgram<double>::EQ_ZERO(fabs(v - trunc(v)));
+  }
 
   void switches_for_joltage(ManualEntry &me) {
     size_t rows = me.joltage.size();
@@ -218,14 +221,23 @@ namespace aoc_2025_10 {
       constraint.rhs = me.joltage[r];
       constraints.push_back(constraint);
     }
+#define MIN bitset<LinearProgram<double>::to_index(LinearProgram<double>::SimplexKind::COUNT)>().set(LinearProgram<double>::SimplexKind::MINIMIZE)
     vector<LinearProgram<double>::Restricted> target(cols, LinearProgram<double>::restricted(1.0));
-    LinearProgram<double> lp{constraints, LinearProgram<double>::SimplexKind::MINIMIZE, {target, 0.0}};
+    LinearProgram<double> lp{constraints, MIN, {target, 0.0}};
     auto res = LinearProgram<double>::simplex(lp);
     //cout << lp << endl;
     //cout << "res: ";
     //LinearProgram<double>::print(cout, *res);
     //cout << endl; 
     assert(res);
+    // check for non integer solutions
+    bool is_non_integer = non_integer(res->opt_val);
+    for(const auto& v: res->vars) {
+     is_non_integer |= non_integer(v);
+    }
+    if(is_non_integer) {
+      cout << "is non integer" << res << endl;
+    }
     me.joltage_steps = res->opt_val;
   }
  

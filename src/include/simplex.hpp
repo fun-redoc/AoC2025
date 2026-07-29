@@ -23,6 +23,7 @@
 #include <memory>
 #include <stack>
 #include <queue>
+#include <bitset>
 #include "../include/utils.hpp"
 #include "../include/mymath.hpp"
 
@@ -71,7 +72,7 @@ namespace simplex {
   template<typename T> struct LinearProgram {
     static_assert(is_floating_point<T>::value, "generic type has to be arithmetic");
     public:
-    typedef enum {MINIMIZE, MAXIMIZE} SimplexKind;
+    typedef enum {MINIMIZE=0, MAXIMIZE, INTEGER, COUNT} SimplexKind;
     typedef enum {LE,GE,EQ} Comp;
     typedef struct {
       T opt_val;
@@ -92,9 +93,18 @@ namespace simplex {
       vector<LinearProgram::Restricted> coeffs;
       T const_term;
     } Target; // c1*x1 + ... + cn*xn + const_term;
+
     vector<LinearProgram::Constraint> constraints;
-    SimplexKind kind;
+
+    //SimplexKind kind;
+
+    static constexpr size_t to_index(LinearProgram::SimplexKind k) {
+        return static_cast<size_t>(k);
+    }
+
+    bitset<LinearProgram::to_index(SimplexKind::COUNT)> kinds;
     LinearProgram::Target target;
+
 
     static constexpr LinearProgram::Restricted unrestricted(T v) {
       return {LinearProgram::Restricted::UNRESTRICTED, v};
@@ -138,7 +148,7 @@ namespace simplex {
     friend ostream &operator<<(ostream &oss, const LinearProgram<T> &lp)
     {
       // freind lets the compiler omit the !hidden! this parameter, f*ck OO
-      oss << "Linear Program: " << lp.kind << std::setw(3) << lp.target << endl;
+      oss << "Linear Program: " << lp.kinds << std::setw(3) << lp.target << endl;
       for(size_t r=0; r<lp.constraints.size(); r++) {
         oss << lp.constraints[r].lhs << " " << lp.constraints[r].rel << " " << lp.constraints[r].rhs << endl;
       }
@@ -189,14 +199,34 @@ namespace simplex {
       return make_optional(LinearProgram::Result{opt_val, *raw_res});
     }
 
-    private:
+    static optional<LinearProgram::Result> dual_simplex(const LinearProgram &lp) {
+      // 0. checks
+#ifdef DEBUG
+      assert(GT_ZERO(lp.constraints.size()));
+      assert(lp.target.coeffs.size() == lp.constraints[0].lhs.size());
+#endif
+      shared_ptr<Tableau> t = make_shared<Tableau>(create_dual_tableau(lp));
 
+      auto raw_res = dual_simplex_standard(t);
+      assert(check_feasible(t));
 
-    static constexpr T eps = 1e-9; // 100*numeric_limits<T>::epsilon(); // TODO how to calculate with floats preciselly
+      if(!raw_res) return nullopt;
+      T opt_val = lp.target.const_term;
+      for(size_t v=0; v<t->num_vars; v++) {
+        opt_val += (*raw_res)[v]*lp.target.coeffs[v].val;
+      }
+      return make_optional(LinearProgram::Result{opt_val, *raw_res});
+    }
+
     static constexpr bool GT_ZERO(T a) {return a>eps;}
     static constexpr bool LT_ZERO(T a) {return a<-eps;}
     static constexpr bool EQ_ZERO(T a) {return -eps<=a && a<=eps;}
 //    static constexpr bool EQ_ZERO(T a) {return -1e-9<=a && a<=1e-9;}
+
+    private:
+
+
+    static constexpr T eps = 1e-9; // 100*numeric_limits<T>::epsilon(); // TODO how to calculate with floats preciselly
 
     struct Tableau { 
     /* Tableau Form
@@ -543,6 +573,55 @@ namespace simplex {
       return nullopt;
     }
 
+    static optional<vector<T>> dual_simplex_standard(shared_ptr<Tableau> t) {
+      // mutates the tableau
+      unordered_set<pair<size_t, size_t>, utils::PairHash<size_t, size_t>> finished_pivots;
+      bool has_solution = false;
+
+      while(!has_solution) {
+        // 1. find a row with negative rhs, I'm searching for the smallest rhs
+        optional<size_t> pivot_row = nullopt;
+        for(size_t r=0; r<t->idx_Z_row; r++) {
+          if(t->t[r][t->idx_rhs_col] < 0) {
+            if(!pivot_row || t->t[r][t->idx_rhs_col] < t->t[*pivot_row][t->idx_rhs_col]) {
+              pivot_row = r;
+            }
+          }
+        }
+
+        if(pivot_row) {
+          // 2. for the pivot row search for a columns with negative coefs
+          //    and among them choose the on with the largest (least negative!) coef/z_i ratio
+          optional<T> ratio;
+          optional<size_t> pivot_col = nullopt;
+          for(size_t c=0; c<t->idx_rhs_col; c++) {
+            if(t->t[*pivot_row][c] < 0) {
+              T new_ratio = t->t[t->idx_Z_row][c]/t->t[*pivot_row][c];
+              if(!ratio || new_ratio > ratio) {
+                ratio = new_ratio;
+                pivot_col = c;
+              }
+            }
+          }
+          if(!pivot_col) return nullopt; // no dual solution so far
+
+          pivot(t, *pivot_row, *pivot_col);
+        } else {
+          has_solution = true;
+        }
+      }
+
+      vector<T> solution_vars(t->num_vars, 0);
+      for(size_t r=0; r<t->num_constraints; r++) {
+        size_t row_var = *(t->basic_vars[r]);
+        if(row_var < t->num_vars) {
+          solution_vars[row_var] = t->t[r][t->idx_rhs_col]/t->t[r][*(t->basic_vars[r])];
+        }
+      }
+      return solution_vars;
+
+    }
+
     /**
      * having EQ and GE relations two pases are needed
      * in the first phase (phase1) with help of artificial variables 
@@ -611,7 +690,112 @@ namespace simplex {
         }
       }
 
-      T kind_factor = lp.kind == LinearProgram::SimplexKind::MINIMIZE
+      T kind_factor = lp.kinds.test(to_index(LinearProgram::SimplexKind::MINIMIZE))
+                               ? static_cast<T>( 1)
+                               : static_cast<T>(-1);   // in case of Maximizing simply flip the sign of the target function
+
+      // 1.2 W row for phase 1
+      for(size_t c=0; c<t.idx_art_col; c++) {
+        t.t[t.idx_W_row][c] = static_cast<T>(0);
+        for(size_t r=0; r<t.num_constraints; r++) {
+          if(t.idx_art_col<=t.basic_vars[r] && t.basic_vars[r]<t.idx_rhs_col) {
+            t.t[t.idx_W_row][c] += t.t[r][c];
+          }
+        }
+        t.t[t.idx_W_row][c] *= static_cast<T>(-1);
+      }
+
+      t.t[t.idx_W_row][t.idx_rhs_col] = static_cast<T>(0);
+      for(size_t r=0; r<t.num_constraints; r++) {
+        if(t.idx_art_col<=t.basic_vars[r] && t.basic_vars[r]<t.idx_rhs_col) {
+          t.t[t.idx_W_row][t.idx_rhs_col] += t.t[r][t.idx_rhs_col];
+        }
+      }
+      t.t[t.idx_W_row][t.idx_rhs_col] *= static_cast<T>(-1);
+
+      for(size_t c=t.idx_art_col; c<t.idx_rhs_col; c++) {
+        t.t[t.idx_W_row][c] = static_cast<T>(0);
+      }
+
+      // 1.3 Z row for phase 2
+      t.t[t.idx_Z_row][t.idx_rhs_col] = lp.target.const_term;
+      size_t var_num = 0;
+      for(size_t c=0; c<lp.target.coeffs.size(); c++) {
+        t.t[t.idx_Z_row][var_num] = +kind_factor*lp.target.coeffs[c].val;
+        var_num++;
+        if(lp.target.coeffs[c].restriction == LinearProgram::Restricted::UNRESTRICTED) {
+          t.t[t.idx_Z_row][var_num] = -kind_factor*lp.target.coeffs[c].val;
+          var_num++;
+        }
+      }
+
+      return t;
+    }
+
+    static Tableau create_dual_tableau(const LinearProgram& lp) {
+      // 0. count constraints, determin artificial vars
+      size_t num_art = 0;
+      size_t num_slack = 0;
+      for(const auto& c:lp.constraints) {
+        switch(c.rel) {
+          case LinearProgram::Comp::LE: num_slack++;            break;
+          //case LinearProgram::Comp::GE: num_slack++; num_art++; break;
+          case LinearProgram::Comp::GE: num_slack++;            break;
+          case LinearProgram::Comp::EQ:              num_art++; break;
+          default:
+            cerr << "unkown case" << endl;
+            exit(1);
+        }
+      }
+
+      size_t num_targets = lp.target.coeffs.size() + // include additional target var for unbouded vars
+                           2*count_if(lp.target.coeffs.begin(), lp.target.coeffs.end(),
+                                   [](const auto &c){return c.restriction == LinearProgram::Restricted::UNRESTRICTED;}); 
+
+
+      // 1. build the tableau
+      size_t num_vars = num_targets;
+      Tableau t(num_vars, lp.constraints.size(), num_slack, num_art);
+      // 1.1. rows and vars and rhs
+      size_t cnt_slack_vars = 0;
+      size_t cnt_artif_vars = 0;
+      for(size_t r=0; r<lp.constraints.size(); r++) {
+        t.t[r][t.idx_rhs_col] = lp.constraints[r].rhs;
+        size_t var_num = 0;
+        for(size_t c=0; c<lp.target.coeffs.size(); c++) {
+          t.t[r][var_num]   = lp.constraints[r].lhs[c];
+          var_num++;
+          if(lp.target.coeffs[c].restriction == LinearProgram::Restricted::UNRESTRICTED) {
+            t.t[r][var_num]   = -lp.constraints[r].lhs[c];
+            var_num++;
+          } 
+        }
+        switch(lp.constraints[r].rel) {
+          case LinearProgram::Comp::EQ:
+            // EQ add artificial vars (needed to create a feasible basic form in phase 1)
+            t.t[r][t.idx_art_col+cnt_artif_vars] =  static_cast<T>(1);
+            t.basic_vars[r] = t.idx_art_col+cnt_artif_vars;
+            cnt_artif_vars++;
+            break;
+          case LinearProgram::Comp::LE:
+            // LE only positive slack var
+            t.t[r][t.idx_slack_col+cnt_slack_vars] =  static_cast<T>(1);
+            t.basic_vars[r] = t.idx_slack_col+cnt_slack_vars;
+            cnt_slack_vars++;
+            break;
+          case LinearProgram::Comp::GE:
+            // GE in dual case no artificial vars for GE case
+            t.t[r][t.idx_slack_col+cnt_slack_vars] =  static_cast<T>(-1);
+            cnt_slack_vars++;
+            // Flip signs
+            for(size_t c=0; c<t.total_cols; c++) {
+              t.t[r][c] *= static_cast<T>(-1);
+            }
+            break;
+        }
+      }
+
+      T kind_factor = lp.kinds.test(to_index(LinearProgram::SimplexKind::MINIMIZE))
                                ? static_cast<T>( 1)
                                : static_cast<T>(-1);   // in case of Maximizing simply flip the sign of the target function
 
