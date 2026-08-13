@@ -64,3 +64,5 @@ private.key
 certificate.crt
 request.csr
 **/__pycache__/**
+**/uv.lock
+.gitignore
