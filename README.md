@@ -3,7 +3,7 @@ AoC2025 - Advent of Code 2025  C++
 
 Solutions for the 2025 Advent of Code in C++ (23).
 
-![Celebration](./AoC2025.jpeg, "AoC2025 Celebration")
+![Celebration](./AoC2025.jpeg)
 
 
 ## Framework
